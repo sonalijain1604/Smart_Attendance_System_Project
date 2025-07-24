@@ -1,0 +1,148 @@
+{% extends "shared/base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mt-4">Welcome, {{ student.name }}</h2>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <p><strong>Class:</strong> {{ student.class_.class_name }}</p>
+        <p><strong>Contact:</strong> {{ student.contact }}</p>
+    </div>
+    <div class="col-md-6 text-center">
+        <img src="{{ url_for('static', filename='uploads/images/' ~ student.profile_pic) }}" alt="Profile" class="img-thumbnail" width="150">
+    </div>
+</div>
+
+<hr>
+{% if last_uploaded_time %}
+<div class="alert alert-info mt-4">
+    <strong>📅 Last Video Uploaded on:</strong> {{ last_uploaded_time }}
+</div>
+{% else %}
+<div class="alert alert-warning mt-4">
+    No video uploaded yet.
+</div>
+{% endif %}
+<hr>
+<h4>Upload Your Face Video (4-5 seconds)</h4>
+<form method="POST" enctype="multipart/form-data" action="{{ url_for('student.upload_video') }}">
+    <div class="form-group mb-2">
+        <label for="video">Select Video</label>
+        <input type="file" name="video" accept="video/*" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary mt-2">Upload</button>
+</form>
+
+<!-- 🟦 Progress Container -->
+<div id="progress-container" class="mt-4" style="display: none;">
+    <h5 class="mt-4">📽️ Video Registration Progress</h5>
+    <div class="progress" style="height: 25px;">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+             role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
+    <ul id="progress-steps" class="list-group list-group-flush mt-3"></ul>
+</div>
+
+<hr>
+
+<h4 class="mt-4">📊 My Attendance Stats</h4>
+
+{% if attendance_stats %}
+<table class="table table-bordered mt-3">
+    <thead class="thead-light">
+        <tr>
+            <th>Subject</th>
+            <th>Present</th>
+            <th>Total</th>
+            <th>Percentage</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for summary, subject in attendance_stats %}
+            <tr>
+                <td>{{ subject.subject_name }}</td>
+                <td>{{ summary.classes_present }}</td>
+                <td>{{ summary.total_classes }}</td>
+                <td>
+                    {% if summary.total_classes > 0 %}
+                        {{ ((summary.classes_present / summary.total_classes) * 100) | round(2) }}%
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+    <p>No attendance data available.</p>
+{% endif %}
+
+<!-- 🔌 SSE Progress Script -->
+<script>
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // UI setup
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressSteps = document.getElementById('progress-steps');
+
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.innerText = '0%';
+        progressSteps.innerHTML = '';
+
+        function updateStep(text, percent) {
+            progressBar.style.width = percent + '%';
+            progressBar.innerText = percent + '%';
+
+            const li = document.createElement('li');
+            li.textContent = text;
+            li.className = "list-group-item";
+            progressSteps.appendChild(li);
+        }
+
+        // Start listening to the progress updates from SSE
+        const eventSource = new EventSource("{{ url_for('student.upload_video_progress') }}");
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            updateStep(data.step, data.percent);
+
+            if (data.percent === 100) {
+                eventSource.close();
+
+                // ✅ Show success alert when done
+                const successAlert = document.createElement('div');
+                successAlert.className = 'alert alert-success mt-3';
+                successAlert.innerHTML = '🎉 <strong>Success!</strong> Your video was registered successfully.';
+                progressContainer.appendChild(successAlert);
+
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('student.dashboard') }}";
+                }, 3000);
+            }
+        };
+
+        // Upload video via fetch
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        }).catch(error => {
+            console.error("Upload failed:", error);
+            eventSource.close();
+
+            const errorAlert = document.createElement('div');
+            errorAlert.className = 'alert alert-danger mt-3';
+            errorAlert.innerText = '❌ Upload failed. Please try again.';
+            progressContainer.appendChild(errorAlert);
+        });
+    });
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,338 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Teacher Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mt-4">Welcome, {{ teacher.name }}</h2>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h5>Profile</h5>
+        <p><strong>Class In-Charge:</strong> {{ class_name or "None" }}</p>
+        <p><strong>Contact:</strong> {{ teacher.contact }}</p>
+    </div>
+    <div class="col-md-6 text-center">
+        <img src="{{ url_for('static', filename='uploads/images/' ~ teacher.profile_pic) }}"
+             alt="Profile" class="img-thumbnail" width="150">
+    </div>
+</div>
+
+<hr>
+
+<div class="row">
+    <!-- Attendance History -->
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">🕓 Attendance History</h5>
+                <p class="card-text">View & edit attendance taken in the last 7 days.</p>
+                <a href="{{ url_for('teacher.attendance_history') }}" class="btn btn-primary">View History</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Stats -->
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">📊 Attendance Stats</h5>
+                <p class="card-text">Check subject-wise and class-wise attendance reports.</p>
+                <a href="{{ url_for('teacher.attendance_stats') }}" class="btn btn-primary">View Stats</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+{% if students_with_flags and recognition_method in ['video', 'csv'] %}
+    {% set recognized_count = students_with_flags | selectattr("1") | list | length %}
+    <div class="alert alert-{{ 'success' if recognized_count > 0 else 'warning' }} alert-dismissible fade show mt-3" role="alert">
+        {% if recognized_count > 0 %}
+            🎉 <strong>Success!</strong> {{ recognized_count }} student{{ 's' if recognized_count != 1 else '' }} recognized.
+        {% else %}
+            ⚠️ <strong>Notice:</strong> No students were recognized. You may review manually below.
+        {% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+
+
+<h4 class="mt-4">Upload Class Video for Attendance</h4>
+
+<!-- 🟦 Progress Container -->
+<div id="progress-container" class="mt-4" style="display: none;">
+    <h5 class="mt-4">🎬 Attendance Processing Progress</h5>
+    <div class="progress" style="height: 25px;">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+             role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
+    <ul id="progress-steps" class="list-group list-group-flush mt-3"></ul>
+</div>
+
+<!-- Upload Form -->
+<form id="video-upload-form" method="POST" enctype="multipart/form-data" action="{{ url_for('teacher.upload_video') }}">
+    <div class="form-group mb-2">
+        <label for="class_id">Class</label>
+        <select name="class_id" class="form-control" id="class_id" required>
+            <option value="">Choose Class</option>
+            {% for class in teacher_classes %}
+                <option value="{{ class.class_id }}">{{ class.class_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group mb-2">
+        <label for="subject_id">Subject</label>
+        <select name="subject_id" class="form-control" id="subject_id" required>
+            <option value="">Choose Subject</option>
+            {% for subject in teacher_subjects %}
+                <option value="{{ subject.subject_id }}">{{ subject.subject_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group mb-2">
+        <label for="periods">Periods</label>
+        <input type="text" name="periods" class="form-control" placeholder="e.g. 1,2,3" required>
+        <small class="form-text text-muted">Enter comma-separated period numbers</small>
+    </div>
+
+    <div class="form-group mb-2">
+        <label for="date">Date</label>
+        <input type="date" name="date" class="form-control" value="{{ current_date }}" required>
+    </div>
+
+    <div class="form-group mb-2">
+        <label for="video">Video File</label>
+        <input type="file" name="video" accept="video/*" class="form-control" required>
+    </div>
+
+    <!-- Upload Type Buttons -->
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary" id="video-btn">Upload Video</button>
+        <button type="button" class="btn btn-success" id="csv-btn">Upload CSV</button>
+        <button type="button" class="btn btn-secondary" id="manual-btn">Manual Attendance</button>
+    </div>
+
+</form>
+
+<!-- Hidden Form for CSV Upload -->
+<form id="csv-upload-form" method="POST" enctype="multipart/form-data" action="{{ url_for('teacher.upload_csv') }}" style="display: none;">
+    <input type="hidden" name="class_id">
+    <input type="hidden" name="subject_id">
+    <input type="hidden" name="periods">
+    <input type="hidden" name="date">
+    <input type="file" name="csv_file" accept=".csv,.txt" required>
+</form>
+
+<!-- Hidden Form for Manual Attendance -->
+<form id="manual-attendance-form" method="POST" action="{{ url_for('teacher.manual_attendance') }}" style="display: none;">
+    <input type="hidden" name="class_id">
+    <input type="hidden" name="subject_id">
+    <input type="hidden" name="periods">
+    <input type="hidden" name="date">
+</form>
+
+
+
+<!-- Subject Loader Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const classSelect = document.getElementById('class_id');
+        const subjectSelect = document.getElementById('subject_id');
+
+        classSelect.addEventListener('change', function () {
+            const classId = this.value;
+            subjectSelect.innerHTML = '<option value="">Choose Subject</option>';
+
+            if (classId) {
+                fetch(`/teacher/get_subjects/${classId}`)
+                    .then(response => response.json())
+                    .then(subjects => {
+                        subjects.forEach(subject => {
+                            const option = document.createElement('option');
+                            option.value = subject.id;
+                            option.textContent = subject.name;
+                            subjectSelect.appendChild(option);
+                        });
+                    })
+                    .catch(err => {
+                        console.error("Error loading subjects:", err);
+                    });
+            }
+        });
+    });
+</script>
+
+<hr>
+
+{% if students_with_flags %}
+<h4>📋 Review Attendance Details</h4>
+
+<div class="mb-3">
+    <p><strong>Date:</strong> {{ date }}</p>
+    <p><strong>Class:</strong>
+        {% for class in teacher_classes %}
+            {% if class.class_id == class_id|int %}{{ class.class_name }}{% endif %}
+        {% endfor %}
+    </p>
+    <p><strong>Subject:</strong>
+        {% for subject in teacher_subjects %}
+            {% if subject.subject_id == subject_id|int %}{{ subject.subject_name }}{% endif %}
+        {% endfor %}
+    </p>
+    <p><strong>Periods:</strong> {{ period_input }}</p>
+</div>
+
+<h5 class="mt-4">✅ Confirm Student Attendance</h5>
+
+<form method="POST" action="{{ url_for('teacher.confirm_attendance') }}">
+    <input type="hidden" name="class_id" value="{{ class_id }}">
+    <input type="hidden" name="subject_id" value="{{ subject_id }}">
+    <input type="hidden" name="period" value="{{ period_input }}">
+    <input type="hidden" name="date" value="{{ date }}">
+
+    <table class="table table-bordered mt-3">
+        <thead class="thead-light">
+            <tr>
+                <th>✅ Include</th>
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student, is_recognized in students_with_flags %}
+                <tr class="{{ 'table-success' if is_recognized else 'table-light' }}">
+                    <td>
+                        <input type="checkbox" name="present_ids" value="{{ student.student_id }}"
+                               {% if is_recognized %}checked{% endif %}>
+                    </td>
+                    <td>{{ student.student_id }}</td>
+                    <td>{{ student.name }}</td>
+                    <td>
+                        {% if is_recognized %}
+                            ✅ Recognized
+                        {% else %}
+                            ❌ Not Detected
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-primary">✅ Save Attendance</button>
+</form>
+{% endif %}
+
+<!-- SSE Progress Script -->
+<script>
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressSteps = document.getElementById('progress-steps');
+
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.innerText = '0%';
+        progressSteps.innerHTML = '';
+
+        function updateStep(text, percent) {
+            progressBar.style.width = percent + '%';
+            progressBar.innerText = percent + '%';
+
+            const li = document.createElement('li');
+            li.textContent = text;
+            li.className = "list-group-item";
+            progressSteps.appendChild(li);
+        }
+
+        const eventSource = new EventSource("{{ url_for('teacher.upload_video_progress') }}");
+
+        let fetchCompleted = false;
+
+        // Upload video via fetch
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            fetchCompleted = true;
+            // replace the current page with returned HTML
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(error => {
+            console.error("Upload failed:", error);
+            eventSource.close();
+            alert("Upload failed. Please try again.");
+        });
+
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            updateStep(data.step, data.percent);
+
+            if (data.percent === 100) {
+                eventSource.close();
+                // We rely on fetch response to render the final page
+                // const successAlert = document.createElement('div');
+                // successAlert.className = 'alert alert-success mt-3';
+                // successAlert.innerHTML = '🎉 <strong>Success!</strong> Your video was utilized successfully.';
+                // progressContainer.appendChild(successAlert);
+            }
+        };
+    });
+</script>
+
+<script>
+    const classSelect = document.getElementById('class_id');
+    const subjectSelect = document.getElementById('subject_id');
+    const periodsInput = document.querySelector('input[name="periods"]');
+    const dateInput = document.querySelector('input[name="date"]');
+
+    function validateFormInputs() {
+        if (!classSelect.value || !subjectSelect.value || !periodsInput.value || !dateInput.value) {
+            alert("Please fill in Class, Subject, Periods, and Date before continuing.");
+            return false;
+        }
+        return true;
+    }
+
+    function populateForm(form) {
+        form.querySelector('input[name="class_id"]').value = classSelect.value;
+        form.querySelector('input[name="subject_id"]').value = subjectSelect.value;
+        form.querySelector('input[name="periods"]').value = periodsInput.value;
+        form.querySelector('input[name="date"]').value = dateInput.value;
+    }
+
+    document.getElementById('csv-btn').addEventListener('click', () => {
+        if (!validateFormInputs()) return;
+
+        const csvForm = document.getElementById('csv-upload-form');
+        populateForm(csvForm);
+        csvForm.querySelector('input[type="file"]').click();
+        csvForm.querySelector('input[type="file"]').addEventListener('change', () => {
+            csvForm.submit();
+        }, { once: true });
+    });
+
+    document.getElementById('manual-btn').addEventListener('click', () => {
+        if (!validateFormInputs()) return;
+
+        const manualForm = document.getElementById('manual-attendance-form');
+        populateForm(manualForm);
+        manualForm.submit();
+    });
+</script>
+
+
+
+{% endblock %}

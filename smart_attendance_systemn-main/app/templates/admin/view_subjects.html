@@ -1,0 +1,18 @@
+{% extends "shared/base.html" %}
+{% block content %}
+<h2>Subjects</h2>
+<table class="table table-bordered">
+  <thead>
+    <tr><th>ID</th><th>Class</th><th>Subject</th></tr>
+  </thead>
+  <tbody>
+    {% for subj in subjects %}
+    <tr>
+      <td>{{ subj.subject_id }}</td>
+      <td>{{ subj.class_.class_name if subj.class_ else 'None' }}</td>
+      <td>{{ subj.subject_name }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

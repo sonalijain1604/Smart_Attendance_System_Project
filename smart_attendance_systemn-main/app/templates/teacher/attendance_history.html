@@ -1,0 +1,72 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<h2>Attendance History (Last 5 Entries)</h2>
+
+{% for log in logs %}
+    <form method="POST" action="{{ url_for('teacher.update_attendance', date=log.date, class_id=log.class_id, subject_id=log.subject_id) }}">
+        <div class="card my-3">
+            <div class="card-header">
+                <div class="mb-2">
+                    <label><strong>Date:</strong></label>
+                    <input type="date" value="{{ log.date }}" class="form-control" disabled>
+                </div>
+
+                <div class="mb-2">
+                    <label><strong>Class:</strong></label>
+                    <input type="text" value="{{ log.class_name }}" class="form-control" disabled>
+                </div>
+
+                <div class="mb-2">
+                    <label><strong>Subject:</strong></label>
+                    <input type="text" value="{{ log.subject_name }}" class="form-control" disabled>
+                </div>
+
+                <div class="mb-2">
+                    <label><strong>Periods:</strong></label>
+                    <input type="text" value="{{ log.periods }}" class="form-control" disabled>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <h5>Present Students:</h5>
+                <ul>
+                    {% for student in log.students %}
+                        <li>{{ student[2] }} ({{ student[1] }})</li>
+                    {% endfor %}
+                </ul>
+
+                <h5>Add More Students:</h5>
+                <div class="input-group mb-3">
+                    <select name="student_id" class="form-select student-select" required>
+                        <option value="">Select Student</option>
+                        {% for student in all_students %}
+                            {% if student.class_id == log.class_id and student.student_id not in log.student_ids %}
+                                <option value="{{ student.student_id }}">{{ student.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-success">ADD</button>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<!-- Optional: Add searchable select with Select2 (requires jQuery & Select2) -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        $('.student-select').select2({
+            width: '100%',
+            placeholder: "Select Student",
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

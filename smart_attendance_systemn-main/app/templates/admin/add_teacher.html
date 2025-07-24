@@ -1,0 +1,20 @@
+{% extends "shared/base.html" %}
+{% block title %}Add Teacher{% endblock %}
+{% block content %}
+<h2>Add Teacher</h2>
+<form method="POST">
+    <div class="mb-3"><label>Teacher ID</label><input class="form-control" name="teacher_id" required></div>
+    <div class="mb-3"><label>Name</label><input class="form-control" name="name" required></div>
+    <div class="mb-3"><label>Password</label><input class="form-control" name="password" required></div>
+    <div class="mb-3"><label>Class In-Charge (Optional)</label>
+        <select name="class_in_charge" class="form-control">
+            <option value="none">None</option>
+            {% for cls in classes %}
+            <option value="{{ cls.class_id }}">{{ cls.class_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3"><label>Contact</label><input class="form-control" name="contact" required></div>
+    <button type="submit" class="btn btn-success">Add Teacher</button>
+</form>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<h2>Edit Student</h2>
+<form method="POST">
+  <div class="mb-3">
+    <label>Name:</label>
+    <!-- Name should not be editable, so we will display it as text -->
+    <p class="form-control-static">{{ student.name }}</p>
+  </div>
+  <div class="mb-3">
+    <label>Class:</label>
+    <!-- Display the class name as text instead of a dropdown -->
+    <p class="form-control-static">{{ student.class_.class_name }}</p>
+  </div>
+  <div class="mb-3">
+    <label>Contact:</label>
+    <!-- Allow editing of contact -->
+    <input type="text" name="contact" value="{{ student.contact }}" class="form-control">
+  </div>
+  <button type="submit" class="btn btn-success">Save</button>
+</form>
+{% endblock %}

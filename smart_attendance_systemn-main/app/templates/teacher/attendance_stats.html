@@ -1,0 +1,79 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<h2 class="mb-4">📊 Attendance Statistics</h2>
+
+<form method="get" class="row g-3 mb-4">
+  <div class="col-md-3">
+    <select name="class_id" class="form-select">
+      <option value="">All Classes</option>
+      {% for cls in classes %}
+        <option value="{{ cls.class_id }}" {% if selected_class == cls.class_id|string %}selected{% endif %}>
+          {{ cls.class_name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <select name="subject_id" class="form-select">
+      <option value="">All Subjects</option>
+      {% for sub in subjects %}
+        <option value="{{ sub.subject_id }}" {% if selected_subject == sub.subject_id|string %}selected{% endif %}>
+          {{ sub.subject_name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-4">
+    <input type="text" name="search" class="form-control" placeholder="Search by name or ID" value="{{ search_query or '' }}">
+  </div>
+
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary w-100">🔍 Filter</button>
+  </div>
+</form>
+
+<form method="POST" action="{{ url_for('teacher.export_attendance_pdf') }}" target="_blank">
+  <input type="hidden" name="class_id" value="{{ selected_class }}">
+  <input type="hidden" name="subject_id" value="{{ selected_subject }}">
+  <input type="hidden" name="search" value="{{ search_query }}">
+  <button type="submit" class="btn btn-danger mb-3">⬇️ Export to PDF</button>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-bordered table-striped align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>Student ID</th>
+        <th>Name</th>
+        <th>Class</th>
+        <th>Subject ID</th>
+        <th>Present</th>
+        <th>Total</th>
+        <th>Percentage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for stat, student in records %}
+      <tr>
+        <td>{{ student.student_id }}</td>
+        <td>{{ student.name }}</td>
+        <td>{{ student.class_.class_name }}</td>
+        <td>{{ stat.subject_id }}</td>
+        <td>{{ stat.classes_present }}</td>
+        <td>{{ stat.total_classes }}</td>
+        <td>
+          {% if stat.total_classes > 0 %}
+            {{ ((stat.classes_present / stat.total_classes) * 100)|round(2) }}%
+          {% else %}
+            N/A
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

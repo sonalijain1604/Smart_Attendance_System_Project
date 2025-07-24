@@ -1,0 +1,31 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<h2>Edit Teacher</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label>Name:</label>
+        <input type="text" name="name" value="{{ teacher.name }}" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Contact:</label>
+        <input type="text" name="contact" value="{{ teacher.contact }}" class="form-control">
+    </div>
+
+    <div class="mb-3">
+        <label for="class_in_charge" class="form-label">Class In-Charge</label>
+        <select name="class_in_charge" class="form-select">
+            <option value="">None</option>
+            {% for cls in available_classes %}
+                <option value="{{ cls.class_id }}" {% if teacher.class_in_charge == cls.class_id %}selected{% endif %}>
+                    {{ cls.class_name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+{% endblock %}
+

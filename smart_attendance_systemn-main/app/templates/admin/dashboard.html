@@ -1,0 +1,68 @@
+{% extends "shared/base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Welcome, Admin!</h2>
+    <hr>
+
+    <div class="row">
+
+        <!-- Manage Teachers -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Manage Teachers</h4>
+                    <p class="card-text">View or edit teacher data, assign classes.</p>
+                    <a href="{{ url_for('admin.view_teachers') }}" class="btn btn-primary">View Teachers</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Students -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Manage Students</h4>
+                    <p class="card-text">View or edit student data and details.</p>
+                    <a href="{{ url_for('admin.view_students') }}" class="btn btn-primary">View Students</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Classes -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Manage Classes</h4>
+                    <p class="card-text">View or edit class details and assignments.</p>
+                    <a href="{{ url_for('admin.view_classes') }}" class="btn btn-primary">View Classes</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Subjects -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Manage Subjects</h4>
+                    <p class="card-text">View or edit subject details and assignments.</p>
+                    <a href="{{ url_for('admin.view_subjects') }}" class="btn btn-primary">View Subjects</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload CSV -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Upload CSV Data</h4>
+                    <p class="card-text">Upload CSVs for bulk student, teacher, subject, or class data.</p>
+                    <a href="{{ url_for('admin.manual_csv_upload') }}" class="btn btn-success">Upload CSV</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

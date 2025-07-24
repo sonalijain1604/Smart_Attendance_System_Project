@@ -1,0 +1,38 @@
+{% extends "shared/base.html" %}
+{% block title %}View Teachers{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>All Teachers</h2>
+    <a href="{{ url_for('admin.add_teacher') }}" class="btn btn-success mb-3">+ Add Teacher</a>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Password</th>
+                <th>Class In-Charge</th>
+                <th>Contact</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for teacher in teachers %}
+            <tr>
+                <td>{{ teacher.teacher_id }}</td>
+                <td>{{ teacher.name }}</td>
+                <td>{{ teacher.password }}</td>
+                <td>{{ teacher.class_.class_name if teacher.class_ else 'None' }}</td>
+                <td>{{ teacher.contact }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_teacher', teacher_id=teacher.teacher_id) }}" class="btn btn-sm btn-warning">Edit</a>
+                    <form action="{{ url_for('admin.delete_teacher', teacher_id=teacher.teacher_id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
